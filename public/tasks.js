@@ -10,11 +10,16 @@ class Tasks {
                 success: 'alert alert-success',
                 error: 'alert alert-danger'
             },
-            apiRoute: '/api/tasks'
+            apiRoute: '/api/tasks',
+            addForm: document.getElementById('add-task'),
+            updateForm: document.getElementById('update-task')
         };
 
         this.loadTasks();
         this.handleCreateTask();
+        this.handleUpdateTask();
+
+        this.handleStornoLink();
     }
 
     loadTasks() {
@@ -25,31 +30,27 @@ class Tasks {
 
             $container.innerHTML = '';
 
+            if(Object.keys(response.data).length === 0) {
+                $container.innerText = 'There are no tasks';
+            }
+
             Object.keys(response.data).forEach((index) => {
 
                 let item = response.data[index];
-                let $element = document.createElement('li');
 
-                $element.innerText = item.text;
-                $element.setAttribute('data-id', item.id);
-                $element.setAttribute('class', 'complete-task');
-                $element.setAttribute('title', 'Click me to complete task');
-
-                $container.appendChild($element);
-
-                this.handleCompleteTask($element);
+                this.createTaskItem($container, item);
             });
 
-        }).catch(function(error){
+        }).catch((error) => {
 
-            console.log(error);
+            this.notify('error', 'Server error');
         });
 
     }
 
     handleCreateTask() {
 
-        document.getElementById('add-task').addEventListener('submit', (e) => {
+        this.settings.addForm.addEventListener('submit', (e) => {
 
             e.preventDefault();
 
@@ -76,11 +77,35 @@ class Tasks {
 
     }
 
-    handleUpdateTask() {}
+    handleUpdateTask() {
+
+        this.settings.updateForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            let $el = e.target;
+            let data = this.formData(e.target);
+
+            axios.put(this.settings.apiRoute + '/' + $el.dataset.id, {
+                id: data.get('id'),
+                text: data.get('text')
+            }).then((response) => {
+
+                this.loadTasks();
+                this.notify('success', 'Task was successfully updated');
+
+                this.settings.addForm.setAttribute('class', '');
+                this.settings.updateForm.setAttribute('class', 'hidden');
+
+            }).catch((error) => {});
+        });
+    }
 
     handleCompleteTask(element){
 
         element.addEventListener('click', (e) => {
+
+            e.preventDefault();
+            e.stopPropagation();
 
             let $el = e.target;
 
@@ -120,6 +145,78 @@ class Tasks {
     formData(form) {
 
         return new FormData(form);
+    }
+
+    createTaskItem($container, data) {
+
+        let $element = document.createElement('li');
+        let $checkbox = document.createElement('input');
+        let $row = document.createElement('div');
+        let $col1 = document.createElement('div');
+        let $col11 = document.createElement('div');
+
+        $row.setAttribute('class', 'row');
+        $col1.setAttribute('class', 'col-md-1');
+        $col11.setAttribute('class', 'col-md-11');
+
+        $col11.innerText = data.text;
+
+        $element.setAttribute('class', 'list-group-item');
+        $element.setAttribute('title', 'Click me to complete task');
+
+        $checkbox.setAttribute('type', 'checkbox');
+        $checkbox.setAttribute('data-id', data.id);
+
+        // add checkbox to column
+        $col1.appendChild($checkbox);
+
+        // append grid columns to list item
+        $row.appendChild($col1);
+        $row.appendChild($col11);
+
+        $element.appendChild($row);
+
+        $container.appendChild($element);
+
+        this.handleCompleteTask($checkbox);
+        this.handleEditTask($element);
+    }
+
+    handleEditTask(element) {
+
+        element.addEventListener('click', (e) => {
+
+            let $el = e.target;
+
+            this.settings.addForm.setAttribute('class', 'hidden');
+            this.settings.updateForm.setAttribute('class', '');
+
+
+            let $idField = this.settings.updateForm.getElementsByClassName('id-field')[0],
+                $textField = this.settings.updateForm.getElementsByClassName('text-field')[0],
+                id = $el.closest('li').getElementsByTagName('input')[0].dataset.id;
+
+            $idField.value = id;
+            $textField.value = $el.innerText;
+
+            this.settings.updateForm.setAttribute('data-id', id);
+        });
+
+    }
+
+    handleStornoLink() {
+
+        let stornoLink = document.getElementsByClassName('storno-link')[0];
+
+        stornoLink.addEventListener('click', (e) => {
+
+            e.preventDefault();
+
+            this.settings.addForm.setAttribute('class', '');
+            this.settings.updateForm.setAttribute('class', 'hidden');
+        });
+
+
     }
 }
 

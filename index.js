@@ -20,8 +20,6 @@ app.use(function(req, res, next) {
 	next();
 });
 
-app.set('view engine', 'ejs');
-
 
 app.get('/', function (req, res) {
 	res.sendFile(path.join(__dirname + '/public/index.html'));
